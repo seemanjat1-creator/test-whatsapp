@@ -1,8 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from typing import Dict, Any
-from app.services.whatsapp_service import whatsapp_service
-from app.services.chat_service import chat_service
-from app.models.chat import MessageCreate, MessageDirection
+from app.services.message_queue import message_queue
 from app.models.phone_number import PhoneStatus
 import logging
 from datetime import datetime
@@ -47,31 +45,34 @@ async def whatsapp_message_webhook(request: Request):
     }
     """
     async with webhook_timeout(300):  # 5 minutes timeout
-    try:
-        webhook_data = await request.json()
-        logger.info(f"Received WhatsApp webhook: {webhook_data}")
-        
-        # Process incoming message
-        message = await whatsapp_service.process_incoming_message(webhook_data)
-        
-        if message:
-            # Generate AI response if enabled
-            ai_response = await chat_service.process_ai_response(
-                message.chat_id, 
-                message.content
-            )
+        try:
+            webhook_data = await request.json()
+            logger.info(f"Received WhatsApp webhook: {webhook_data}")
             
-            if ai_response:
-                logger.info(f"AI response generated for chat {message.chat_id}")
-        
-        return {"status": "success", "message": "Message processed"}
-        
+            # Validate required fields
+            required_fields = ["phone_number", "from", "message"]
+            for field in required_fields:
+                if not webhook_data.get(field):
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Missing required field: {field}"
+                    )
+            
+            # Enqueue message for processing
+            message_id = await message_queue.enqueue_message(webhook_data)
+            
+            return {
+                "status": "success", 
+                "message": "Message queued for processing",
+                "message_id": message_id
+            }
+            
         except asyncio.CancelledError:
             logger.warning("WhatsApp message webhook timed out")
             raise HTTPException(status_code=408, detail="Webhook processing timeout")
-    except Exception as e:
-        logger.error(f"WhatsApp webhook error: {e}")
-        raise HTTPException(status_code=500, detail="Webhook processing failed")
+        except Exception as e:
+            logger.error(f"WhatsApp webhook error: {e}")
+            raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 @router.post("/whatsapp/status")
 async def whatsapp_status_webhook(request: Request):
@@ -86,38 +87,39 @@ async def whatsapp_status_webhook(request: Request):
     }
     """
     async with webhook_timeout(300):  # 5 minutes timeout
-    try:
-        webhook_data = await request.json()
-        logger.info(f"Received WhatsApp status webhook: {webhook_data}")
-        
-        phone_number = webhook_data.get("phone_number")
-        status = webhook_data.get("status")
-        qr_code = webhook_data.get("qr_code")
-        
-        if not phone_number or not status:
-            raise HTTPException(status_code=400, detail="Missing required fields")
-        
-        # Map status to enum
-        status_mapping = {
-            "connected": PhoneStatus.CONNECTED,
-            "disconnected": PhoneStatus.DISCONNECTED,
-            "connecting": PhoneStatus.CONNECTING,
-            "error": PhoneStatus.ERROR
-        }
-        
-        phone_status = status_mapping.get(status, PhoneStatus.ERROR)
-        
-        # Update phone status in database
-        await whatsapp_service.update_phone_status(phone_number, phone_status, qr_code)
-        
-        return {"status": "success", "message": "Status updated"}
-        
+        try:
+            webhook_data = await request.json()
+            logger.info(f"Received WhatsApp status webhook: {webhook_data}")
+            
+            phone_number = webhook_data.get("phone_number")
+            status = webhook_data.get("status")
+            qr_code = webhook_data.get("qr_code")
+            
+            if not phone_number or not status:
+                raise HTTPException(status_code=400, detail="Missing required fields")
+            
+            # Map status to enum
+            status_mapping = {
+                "connected": PhoneStatus.CONNECTED,
+                "disconnected": PhoneStatus.DISCONNECTED,
+                "connecting": PhoneStatus.CONNECTING,
+                "error": PhoneStatus.ERROR
+            }
+            
+            phone_status = status_mapping.get(status, PhoneStatus.ERROR)
+            
+            # Update phone status in database
+            from app.services.whatsapp_service import whatsapp_service
+            await whatsapp_service.update_phone_status(phone_number, phone_status, qr_code)
+            
+            return {"status": "success", "message": "Status updated"}
+            
         except asyncio.CancelledError:
             logger.warning("WhatsApp status webhook timed out")
             raise HTTPException(status_code=408, detail="Webhook processing timeout")
-    except Exception as e:
-        logger.error(f"WhatsApp status webhook error: {e}")
-        raise HTTPException(status_code=500, detail="Status webhook processing failed")
+        except Exception as e:
+            logger.error(f"WhatsApp status webhook error: {e}")
+            raise HTTPException(status_code=500, detail="Status webhook processing failed")
 
 @router.post("/whatsapp/qr")
 async def whatsapp_qr_webhook(request: Request):
@@ -142,6 +144,7 @@ async def whatsapp_qr_webhook(request: Request):
                 raise HTTPException(status_code=400, detail="Missing phone or qr_url")
             
             # Update phone status to WAITING_FOR_SCAN and store QR URL
+            from app.services.whatsapp_service import whatsapp_service
             await whatsapp_service.update_phone_status(
                 phone_number, 
                 PhoneStatus.CONNECTING, 
@@ -172,21 +175,32 @@ async def whatsapp_delivery_webhook(request: Request):
     }
     """
     async with webhook_timeout(300):  # 5 minutes timeout
-    try:
-        webhook_data = await request.json()
-        logger.info(f"Received WhatsApp delivery webhook: {webhook_data}")
-        
-        # Here you can update message delivery status in your database
-        # For now, we'll just log it
-        
-        return {"status": "success", "message": "Delivery status updated"}
-        
+        try:
+            webhook_data = await request.json()
+            logger.info(f"Received WhatsApp delivery webhook: {webhook_data}")
+            
+            # Update message delivery status in database
+            message_id = webhook_data.get("message_id")
+            status = webhook_data.get("status")
+            
+            if message_id and status:
+                db = get_database()
+                await db.messages.update_one(
+                    {"external_message_id": message_id},
+                    {"$set": {
+                        "delivery_status": status,
+                        "delivered_at": datetime.utcnow()
+                    }}
+                )
+            
+            return {"status": "success", "message": "Delivery status updated"}
+            
         except asyncio.CancelledError:
             logger.warning("WhatsApp delivery webhook timed out")
             raise HTTPException(status_code=408, detail="Webhook processing timeout")
-    except Exception as e:
-        logger.error(f"WhatsApp delivery webhook error: {e}")
-        raise HTTPException(status_code=500, detail="Delivery webhook processing failed")
+        except Exception as e:
+            logger.error(f"WhatsApp delivery webhook error: {e}")
+            raise HTTPException(status_code=500, detail="Delivery webhook processing failed")
 
 @router.get("/whatsapp/health")
 async def whatsapp_health_check():

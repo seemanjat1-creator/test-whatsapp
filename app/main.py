@@ -7,10 +7,13 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routes import auth, workspaces, chats, documents, phones, webhooks, workflows
+from app.routes import auth, workspaces, chats, documents, phones, webhooks, workflows, reports, monitoring
+from app.services.message_queue import message_queue
+from app.services.scheduler_service import scheduler_service
 import logging
 import uvicorn
 from contextlib import asynccontextmanager
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -28,12 +31,24 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting WhatsApp Automation Backend...")
     await connect_to_mongo()
+    
+    # Initialize message queue
+    await message_queue.initialize()
+    
+    # Start message processing in background
+    asyncio.create_task(message_queue.process_messages())
+    
+    # Start scheduler
+    await scheduler_service.start()
+    
     logger.info("Application started successfully")
     
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
+    await scheduler_service.stop()
+    await message_queue.close()
     await close_mongo_connection()
     logger.info("Application shutdown complete")
 
@@ -76,10 +91,17 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Health check endpoint
 @app.get("/health")
 async def health_check():
+    # Check message queue health
+    queue_stats = await message_queue.get_queue_stats()
+    scheduler_status = scheduler_service.get_job_status()
+    
     return {
         "status": "healthy",
         "service": "whatsapp-automation-backend",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "message_queue": queue_stats,
+        "scheduler": scheduler_status,
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 # Include routers
@@ -90,6 +112,8 @@ app.include_router(documents.router, prefix="/documents", tags=["Documents"])
 app.include_router(phones.router, prefix="/phones", tags=["Phone Numbers"])
 app.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
 app.include_router(workflows.router, prefix="/workflows", tags=["Workflows"])
+app.include_router(reports.router, prefix="/reports", tags=["Reports"])
+app.include_router(monitoring.router, prefix="/monitoring", tags=["Monitoring"])
 
 # Root endpoint
 @app.get("/")

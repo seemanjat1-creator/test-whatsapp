@@ -82,6 +82,18 @@ async def create_indexes():
         await db.database.audit_logs.create_index("timestamp")
         await db.database.audit_logs.create_index([("workspace_id", 1), ("action", 1), ("timestamp", -1)])
         
+        # Message queue collection indexes
+        await db.database.message_queue.create_index("message_id", unique=True)
+        await db.database.message_queue.create_index("status")
+        await db.database.message_queue.create_index("created_at")
+        await db.database.message_queue.create_index([("status", 1), ("created_at", -1)])
+        await db.database.message_queue.create_index("phone_number")
+        
+        # System logs collection indexes
+        await db.database.system_logs.create_index("timestamp")
+        await db.database.system_logs.create_index("type")
+        await db.database.system_logs.create_index("job_id")
+        
         logger.info("Database indexes created successfully")
         
     except Exception as e:
