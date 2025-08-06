@@ -4,6 +4,7 @@ from app.models.user import User
 from app.auth.auth_handler import get_current_active_user
 from app.services.message_queue import message_queue
 from app.services.scheduler_service import scheduler_service
+from app.services.export_scheduler import export_scheduler
 from app.database import get_database
 from datetime import datetime, timedelta
 import logging
@@ -23,6 +24,9 @@ async def get_system_health(
         
         # Scheduler status
         scheduler_status = scheduler_service.get_job_status()
+        
+        # Export scheduler status
+        export_status = export_scheduler.get_scheduler_status()
         
         # Database health
         db = get_database()
@@ -49,6 +53,10 @@ async def get_system_health(
             issues.append("Scheduler not running")
             system_status = "error"
         
+        if export_status.get('status') != 'running':
+            issues.append("Export scheduler not running")
+            system_status = "error"
+        
         return {
             "system_status": system_status,
             "timestamp": datetime.utcnow().isoformat(),
@@ -56,6 +64,7 @@ async def get_system_health(
             "components": {
                 "message_queue": queue_stats,
                 "scheduler": scheduler_status,
+                "export_scheduler": export_status,
                 "database": db_health
             }
         }

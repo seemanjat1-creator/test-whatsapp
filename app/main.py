@@ -8,8 +8,10 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
 from app.routes import auth, workspaces, chats, documents, phones, webhooks, workflows, reports, monitoring
+from app.routes import exports
 from app.services.message_queue import message_queue
 from app.services.scheduler_service import scheduler_service
+from app.services.export_scheduler import export_scheduler
 import logging
 import uvicorn
 from contextlib import asynccontextmanager
@@ -41,12 +43,16 @@ async def lifespan(app: FastAPI):
     # Start scheduler
     await scheduler_service.start()
     
+    # Start export scheduler
+    await export_scheduler.start()
+    
     logger.info("Application started successfully")
     
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
+    await export_scheduler.stop()
     await scheduler_service.stop()
     await message_queue.close()
     await close_mongo_connection()
@@ -94,6 +100,7 @@ async def health_check():
     # Check message queue health
     queue_stats = await message_queue.get_queue_stats()
     scheduler_status = scheduler_service.get_job_status()
+    export_status = export_scheduler.get_scheduler_status()
     
     return {
         "status": "healthy",
@@ -101,6 +108,7 @@ async def health_check():
         "version": "1.0.0",
         "message_queue": queue_stats,
         "scheduler": scheduler_status,
+        "export_scheduler": export_status,
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -114,6 +122,7 @@ app.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
 app.include_router(workflows.router, prefix="/workflows", tags=["Workflows"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 app.include_router(monitoring.router, prefix="/monitoring", tags=["Monitoring"])
+app.include_router(exports.router, prefix="/exports", tags=["Excel Exports"])
 
 # Root endpoint
 @app.get("/")

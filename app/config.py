@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     message_retry_attempts: int = int(os.getenv("MESSAGE_RETRY_ATTEMPTS", "3"))
     message_timeout: int = int(os.getenv("MESSAGE_TIMEOUT", "300"))  # 5 minutes
     
+    # Excel Export Settings
+    export_interval_minutes: int = int(os.getenv("EXPORT_INTERVAL_MINUTES", "15"))
+    export_cleanup_days: int = int(os.getenv("EXPORT_CLEANUP_DAYS", "7"))
+    
     class Config:
         env_file = ".env"
 

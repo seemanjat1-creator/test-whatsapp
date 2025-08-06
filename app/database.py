@@ -94,6 +94,12 @@ async def create_indexes():
         await db.database.system_logs.create_index("type")
         await db.database.system_logs.create_index("job_id")
         
+        # Export logs collection indexes
+        await db.database.export_logs.create_index("workspace_id")
+        await db.database.export_logs.create_index("export_type")
+        await db.database.export_logs.create_index("export_timestamp")
+        await db.database.export_logs.create_index([("workspace_id", 1), ("export_type", 1)], unique=True)
+        
         logger.info("Database indexes created successfully")
         
     except Exception as e:
