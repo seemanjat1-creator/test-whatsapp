@@ -293,4 +293,64 @@ export const workflowAPI = {
   },
 };
 
+export const messageBlastAPI = {
+  getWorkspaceBlasts: async (workspaceId: string) => {
+    const response = await api.get(`/message-blasts/workspace/${workspaceId}`);
+    return response.data;
+  },
+  getBlastById: async (blastId: string) => {
+    const response = await api.get(`/message-blasts/${blastId}`);
+    return response.data;
+  },
+  createBlast: async (formData: FormData) => {
+    const response = await api.post('/message-blasts/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  updateBlast: async (blastId: string, data: any) => {
+    const response = await api.put(`/message-blasts/${blastId}`, data);
+    return response.data;
+  },
+  deleteBlast: async (blastId: string) => {
+    const response = await api.delete(`/message-blasts/${blastId}`);
+    return response.data;
+  },
+  getBlastProgress: async (blastId: string) => {
+    const response = await api.get(`/message-blasts/${blastId}/progress`);
+    return response.data;
+  },
+  getBlastTargets: async (blastId: string, status?: string) => {
+    const params = status ? `?target_status=${status}` : '';
+    const response = await api.get(`/message-blasts/${blastId}/targets${params}`);
+    return response.data;
+  },
+  startBlast: async (blastId: string) => {
+    const response = await api.post(`/message-blasts/${blastId}/start`);
+    return response.data;
+  },
+  pauseBlast: async (blastId: string) => {
+    const response = await api.post(`/message-blasts/${blastId}/pause`);
+    return response.data;
+  },
+  resumeBlast: async (blastId: string) => {
+    const response = await api.post(`/message-blasts/${blastId}/resume`);
+    return response.data;
+  },
+  cancelBlast: async (blastId: string) => {
+    const response = await api.post(`/message-blasts/${blastId}/cancel`);
+    return response.data;
+  },
+  previewPhoneNumbers: async (formData: FormData) => {
+    const response = await api.post('/message-blasts/upload-preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  getBlastStatistics: async (workspaceId: string, days: number = 30) => {
+    const response = await api.get(`/message-blasts/workspace/${workspaceId}/statistics?days=${days}`);
+    return response.data;
+  },
+};
+
 export default api;

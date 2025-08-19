@@ -9,6 +9,7 @@ import {
   LogOut,
   Phone,
   GitBranch,
+  Megaphone,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
@@ -18,6 +19,7 @@ import { cn } from '../../lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Chats', href: '/chats', icon: MessageSquare },
+  { name: 'Message Blasts', href: '/message-blasts', icon: Megaphone },
   { name: 'Knowledge Base', href: '/knowledge-base', icon: BookOpen },
   { name: 'Team', href: '/team', icon: Users },
   { name: 'Phone Numbers', href: '/phones', icon: Phone },

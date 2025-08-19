@@ -100,6 +100,19 @@ async def create_indexes():
         await db.database.export_logs.create_index("export_timestamp")
         await db.database.export_logs.create_index([("workspace_id", 1), ("export_type", 1)], unique=True)
         
+        # Message blasts collection indexes
+        await db.database.message_blasts.create_index("workspace_id")
+        await db.database.message_blasts.create_index("status")
+        await db.database.message_blasts.create_index("start_time")
+        await db.database.message_blasts.create_index([("workspace_id", 1), ("status", 1)])
+        await db.database.message_blasts.create_index([("workspace_id", 1), ("created_at", -1)])
+        
+        # Blast targets collection indexes
+        await db.database.blast_targets.create_index("blast_id")
+        await db.database.blast_targets.create_index("status")
+        await db.database.blast_targets.create_index([("blast_id", 1), ("status", 1)])
+        await db.database.blast_targets.create_index([("blast_id", 1), ("batch_number", 1)])
+        
         logger.info("Database indexes created successfully")
         
     except Exception as e:
