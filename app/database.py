@@ -113,6 +113,17 @@ async def create_indexes():
         await db.database.blast_targets.create_index([("blast_id", 1), ("status", 1)])
         await db.database.blast_targets.create_index([("blast_id", 1), ("batch_number", 1)])
         
+        # Email configurations collection indexes
+        await db.database.email_configs.create_index("workspace_id", unique=True)
+        await db.database.email_configs.create_index("status")
+        await db.database.email_configs.create_index([("workspace_id", 1), ("status", 1)])
+        
+        # Email logs collection indexes
+        await db.database.email_logs.create_index("workspace_id")
+        await db.database.email_logs.create_index("email_config_id")
+        await db.database.email_logs.create_index("sent_at")
+        await db.database.email_logs.create_index([("workspace_id", 1), ("sent_at", -1)])
+        
         logger.info("Database indexes created successfully")
         
     except Exception as e:

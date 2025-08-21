@@ -10,6 +10,7 @@ import {
   Phone,
   GitBranch,
   Megaphone,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Team', href: '/team', icon: Users },
   { name: 'Phone Numbers', href: '/phones', icon: Phone },
   { name: 'Workflows', href: '/workflows', icon: GitBranch },
+  { name: 'Email Notifications', href: '/email-notifications', icon: Mail },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

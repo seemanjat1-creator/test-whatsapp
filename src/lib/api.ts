@@ -353,4 +353,46 @@ export const messageBlastAPI = {
   },
 };
 
+export const emailNotificationAPI = {
+  getWorkspaceConfigs: async (workspaceId: string) => {
+    const response = await api.get(`/email-notifications/configs/workspace/${workspaceId}`);
+    return response.data;
+  },
+  createConfig: async (data: any) => {
+    const response = await api.post('/email-notifications/configs', data);
+    return response.data;
+  },
+  updateConfig: async (configId: string, data: any) => {
+    const response = await api.put(`/email-notifications/configs/${configId}`, data);
+    return response.data;
+  },
+  deleteConfig: async (configId: string) => {
+    const response = await api.delete(`/email-notifications/configs/${configId}`);
+    return response.data;
+  },
+  testEmail: async (workspaceId: string, emailAddress: string) => {
+    const response = await api.post('/email-notifications/test', {
+      workspace_id: workspaceId,
+      email_address: emailAddress,
+    });
+    return response.data;
+  },
+  getEmailLogs: async (workspaceId: string, limit: number = 20) => {
+    const response = await api.get(`/email-notifications/logs/workspace/${workspaceId}?limit=${limit}`);
+    return response.data;
+  },
+  getStatistics: async (workspaceId: string, days: number = 7) => {
+    const response = await api.get(`/email-notifications/statistics/workspace/${workspaceId}?days=${days}`);
+    return response.data;
+  },
+  triggerManual: async (workspaceId: string, hours: number = 1) => {
+    const response = await api.post(`/email-notifications/trigger-manual/${workspaceId}?hours=${hours}`);
+    return response.data;
+  },
+  getSystemStatus: async () => {
+    const response = await api.get('/email-notifications/system/status');
+    return response.data;
+  },
+};
+
 export default api;

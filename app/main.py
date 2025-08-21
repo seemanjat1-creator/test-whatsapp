@@ -10,10 +10,12 @@ from app.database import connect_to_mongo, close_mongo_connection
 from app.routes import auth, workspaces, chats, documents, phones, webhooks, workflows, reports, monitoring
 from app.routes import exports
 from app.routes import message_blasts
+from app.routes import email_notifications
 from app.services.message_queue import message_queue
 from app.services.scheduler_service import scheduler_service
 from app.services.export_scheduler import export_scheduler
 from app.services.blast_scheduler_service import blast_scheduler_service
+from app.services.email_scheduler_service import email_scheduler_service
 import logging
 import uvicorn
 from contextlib import asynccontextmanager
@@ -51,12 +53,16 @@ async def lifespan(app: FastAPI):
     # Start blast scheduler
     await blast_scheduler_service.start()
     
+    # Start email notification scheduler
+    await email_scheduler_service.start()
+    
     logger.info("Application started successfully")
     
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
+    await email_scheduler_service.stop()
     await blast_scheduler_service.stop()
     await export_scheduler.stop()
     await scheduler_service.stop()
@@ -130,6 +136,7 @@ app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 app.include_router(monitoring.router, prefix="/monitoring", tags=["Monitoring"])
 app.include_router(exports.router, prefix="/exports", tags=["Excel Exports"])
 app.include_router(message_blasts.router, prefix="/message-blasts", tags=["Message Blasts"])
+app.include_router(email_notifications.router, prefix="/email-notifications", tags=["Email Notifications"])
 
 # Root endpoint
 @app.get("/")

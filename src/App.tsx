@@ -16,6 +16,7 @@ import { TeamPage } from './components/Team/TeamPage';
 import { WorkflowPage } from './components/Workflow/WorkflowPage';
 import { SettingsPage } from './components/Settings/SettingsPage';
 import { MessageBlastPage } from './components/MessageBlast/MessageBlastPage';
+import { EmailNotificationPage } from './components/EmailNotification/EmailNotificationPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -55,6 +56,7 @@ function App() {
                   <Route path="team" element={<TeamPage />} />
                   <Route path="phones" element={<PhonePage />} />
                   <Route path="workflows" element={<WorkflowPage />} />
+                  <Route path="email-notifications" element={<EmailNotificationPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                 </Route>
               </Routes>
